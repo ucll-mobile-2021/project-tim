@@ -1,0 +1,18 @@
+<resources>
+    <string name="app_name">Music Player</string>
+    <string name="song_title">Title</string>
+    <string name="song_artist">Artist</string>
+    <string name="current_song_time">0.0</string>
+    <string name="end_song_time">0.0</string>
+    <string name="title">Not Spotify™</string>
+    <string name="favorites">Favorites</string>
+    <string name="dark_mode">Dark Mode</string>
+    <string name="playlist">Playlists</string>
+    <string name="search">Search</string>
+    <string name="home">Home</string>
+    <string name="menu_home">Home</string>
+    <string name="menu_favorites">Favorites</string>
+    <string name="menu_playlist">Playlist</string>
+    <string name="theme">Dark Mode</string>
+    <string name="enable_dark_mode">Dark Mode</string>
+</resources>
