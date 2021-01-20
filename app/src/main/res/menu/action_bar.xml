@@ -7,6 +7,16 @@
         android:icon="@drawable/ic_search"
         android:title="@string/search"
         app:actionViewClass="android.widget.SearchView"
-        app:showAsAction="always" />
+        app:showAsAction="ifRoom" />
+
+    <item android:id="@+id/sort_by_song"
+        android:title="@string/sort_by_song"
+        app:showAsAction="never"
+        />
+
+    <item android:id="@+id/sort_by_artist"
+        android:title="@string/sort_by_artist"
+        app:showAsAction="never"
+        />
 
 </menu>

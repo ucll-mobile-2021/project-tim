@@ -1,3 +1,4 @@
+/*
 package com.example.musicplayer.ui
 
 import android.os.Bundle
@@ -20,4 +21,4 @@ class PlaylistFragment : Fragment() {
         val root = inflater.inflate(R.layout.fragment_playlist, container, false)
         return root
     }
-}
+}*/

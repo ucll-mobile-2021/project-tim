@@ -21,4 +21,6 @@ class SongAdapter(private val context: Activity, private val songs: ArrayList<St
 
         return rowView
     }
+
+
 }

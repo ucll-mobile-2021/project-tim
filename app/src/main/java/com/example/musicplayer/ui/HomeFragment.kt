@@ -1,20 +1,26 @@
 package com.example.musicplayer.ui
 
+import android.app.Activity
+import android.content.Context
 import android.graphics.Color
-import android.media.Image
+import android.graphics.ColorFilter
+import android.graphics.drawable.Drawable
 import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
+import android.os.SystemClock
+import android.view.*
+import android.view.inputmethod.InputMethodManager
 import android.widget.*
+import androidx.appcompat.widget.TintTypedArray.obtainStyledAttributes
+import androidx.core.content.ContextCompat.getSystemService
 import androidx.fragment.app.Fragment
+import com.example.musicplayer.MainActivity
 import com.example.musicplayer.R
 import com.example.musicplayer.model.SongAdapter
-import org.w3c.dom.Text
 import java.io.File
+
 
 class HomeFragment : Fragment() {
 
@@ -28,13 +34,19 @@ class HomeFragment : Fragment() {
     private lateinit var totalTime: TextView
     private lateinit var currentTime: TextView
     private lateinit var currentSong: TextView
+    private lateinit var toast: Toast
+    private lateinit var listViewAdapter: SongAdapter
+    private lateinit var search: SearchView
+    private lateinit var newList: ArrayList<String>
 
     private var songList: ArrayList<String>? = null
     private var isPlaying: Boolean = false
     private var isLoop: Boolean = false
     private var isShuffle: Boolean = false
     private var currSong: String = ""
-    private var currSongPosition: Int = 0
+    private var currSongPosition: Int = -1
+    private var isInitialized: Boolean = false
+    private var lastClickTime: Long = SystemClock.elapsedRealtime()
 
     override fun onCreateView(
             inflater: LayoutInflater,
@@ -52,12 +64,15 @@ class HomeFragment : Fragment() {
         totalTime = root.findViewById(R.id.tv_total_time)
         currentTime = root.findViewById(R.id.tv_current_time)
         currentSong = root.findViewById(R.id.tv_currently_playing)
+        toast = Toast.makeText(requireContext(), "", Toast.LENGTH_SHORT)
+        toast.setGravity(Gravity.BOTTOM, 0, 315)
 
         songList = getPlayList("/sdcard/Music")
         val lv: ListView = root.findViewById(R.id.list_songs)
-        val listViewAdapter = SongAdapter(requireActivity(), songList!!)
+        listViewAdapter = SongAdapter(requireActivity(), songList!!)
         lv.adapter = listViewAdapter
         initializeSongControl()
+        setHasOptionsMenu(true)
 
         lv.setOnItemClickListener(){ adapterView, view, position, id ->
             val itemAtPos = adapterView.getItemAtPosition(position)
@@ -65,12 +80,25 @@ class HomeFragment : Fragment() {
             currSongPosition = itemIdAtPos.toInt()
             startNewSong(songList!![currSongPosition])
         }
+        lv.setOnItemLongClickListener { parent, view, position, id ->
+            val popup = PopupMenu(requireContext(), view)
+            popup.menuInflater.inflate(R.menu.home_popup_menu, popup.menu)
+            popup.setOnMenuItemClickListener {
+                val itemIdAtPos = parent.getItemIdAtPosition(position)
+                val favSongPosition = itemIdAtPos.toInt()
+                (activity as MainActivity).addToFavorites(songList!![favSongPosition])
+                true
+            }
+            popup.show()
+            true
+        }
         return root
     }
 
     private fun startNewSong(item: Any?) {
         if (currSong == item){
-            Toast.makeText(requireContext(), "Already playing ${item.toString().removeSuffix(".mp3")}", Toast.LENGTH_SHORT).show()
+            toast.setText("The selected song is already playing")
+            toast.show()
         }else{
             if (mp !== null) {
                 isPlaying = true
@@ -96,10 +124,11 @@ class HomeFragment : Fragment() {
     }
 
     private fun randomInt(): Int {
-        return (0 until songList?.size as Int).random()
+        return (1 until songList?.size as Int).random()
     }
 
     private fun playNextSong(i: Int) {
+        listViewAdapter.notifyDataSetChanged()
         if(currSongPosition + i > songList?.size as Int - 1)
         {
             currSongPosition += i - (songList?.size as Int)
@@ -118,7 +147,8 @@ class HomeFragment : Fragment() {
     private fun initializeSongControl() {
         play.setOnClickListener {
             if (mp == null){
-                Toast.makeText(requireContext(), "Please select a song", Toast.LENGTH_SHORT).show()
+                toast.setText("Please select a song")
+                toast.show()
             }else{
                 if (!isPlaying){
                     mp?.start()
@@ -132,7 +162,19 @@ class HomeFragment : Fragment() {
         }
 
         buttonNext.setOnClickListener {
-            if(isShuffle){
+            songList?.clear()
+            songList?.addAll(newList)
+            search.clearFocus()
+            search.setQuery("", true)
+            if (SystemClock.elapsedRealtime() - lastClickTime < 400) {
+                toast.setText("Woah there! Not so fast pal!")
+                toast.show()
+            }
+            else if(songList?.size!! <= 0){
+                toast.setText("You have no songs on your phone.")
+                toast.show()
+            }
+            else if(isShuffle){
                 playNextSong(randomInt())
             }else if (isLoop){
                 loop.callOnClick()
@@ -140,20 +182,36 @@ class HomeFragment : Fragment() {
             }else{
                 playNextSong(1)
             }
+            lastClickTime = SystemClock.elapsedRealtime()
         }
 
         buttonPrevious.setOnClickListener {
-            if(isShuffle){
+            songList?.clear()
+            songList?.addAll(newList)
+            search.clearFocus()
+            search.setQuery("", true)
+            if (SystemClock.elapsedRealtime() - lastClickTime < 400) {
+                toast.setText("Woah there! Not so fast pal!")
+                toast.show()
+            }
+            else if(songList?.size!! <= 0){
+                toast.setText("You have no songs on your phone.")
+                toast.show()
+            }
+            else if(isShuffle){
                 playNextSong(randomInt())
             }else if (isLoop){
-                loop.callOnClick()
-                playNextSong(-1)
+                if(currSong == "") playNextSong(0)
+                else {loop.callOnClick()
+                playNextSong(-1)}
             }else{
-                playNextSong(-1)
+                if(currSong == "") playNextSong(0)
+                else playNextSong(-1)
             }
+            lastClickTime = SystemClock.elapsedRealtime()
         }
 
-        seekbar.setOnSeekBarChangeListener(object: SeekBar.OnSeekBarChangeListener{
+        seekbar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 if (fromUser) {
                     mp?.seekTo(progress)
@@ -169,7 +227,12 @@ class HomeFragment : Fragment() {
 
         loop.setOnClickListener {
             if(isLoop){
-                loop.setColorFilter(Color.argb(255, 255, 255, 255))
+                if ((activity as MainActivity).getIsDarkMode()){
+                    loop.setColorFilter(Color.argb(255, 255, 255, 255))
+                }else{
+                    loop.setColorFilter(Color.argb(255, 0, 0, 0))
+
+                }
                 isLoop = false
             }else{
                 loop.setColorFilter(Color.argb(255, 0, 204, 255))
@@ -180,7 +243,12 @@ class HomeFragment : Fragment() {
 
         shuffle.setOnClickListener {
             if(isShuffle){
-                shuffle.setColorFilter(Color.argb(255, 255, 255, 255))
+                if ((activity as MainActivity).getIsDarkMode()){
+                    shuffle.setColorFilter(Color.argb(255, 255, 255, 255))
+                }else{
+                    shuffle.setColorFilter(Color.argb(255, 0, 0, 0))
+
+                }
                 isShuffle = false
             }else{
                 shuffle.setColorFilter(Color.argb(255, 0, 204, 255))
@@ -208,7 +276,7 @@ class HomeFragment : Fragment() {
         }, 0)
     }
 
-    private fun getPlayList(rootPath: String): ArrayList<String> {
+private fun getPlayList(rootPath: String): ArrayList<String> {
         val fileList: ArrayList<String> = ArrayList()
         val rootFolder = File(rootPath)
         val files: Array<File> = rootFolder.listFiles() //here you will get NPE if directory doesn't contains  any file,handle it like this.
@@ -232,4 +300,97 @@ class HomeFragment : Fragment() {
         return buf.toString()
     }
 
+    override fun onDestroyView() {
+        super.onDestroyView()
+        if (mp != null && isPlaying) {
+            play.callOnClick()
+        }
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if(item.itemId == R.id.sort_by_song)
+        {
+            val sortedList = ArrayList(songList!!.sortedBy {
+                it.removeSuffix(".mp3").split("-")[1].trim()
+            })
+            songList?.clear()
+            songList?.addAll(sortedList)
+            newList.clear()
+            newList.addAll(sortedList)
+            listViewAdapter.notifyDataSetChanged()
+        }
+        else if(item.itemId == R.id.sort_by_artist)
+        {
+            val sortedList = ArrayList(songList!!.sortedBy {
+                it.removeSuffix(".mp3").split("-")[0].trim()
+            })
+            songList?.clear()
+            songList?.addAll(sortedList)
+            newList.clear()
+            newList.addAll(sortedList)
+            listViewAdapter.notifyDataSetChanged()
+        }
+        return super.onOptionsItemSelected(item)
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
+        super.onCreateOptionsMenu(menu, inflater)
+
+        newList = ArrayList()
+        songList?.let { newList.addAll(it) }
+        search = menu.findItem(R.id.menu_search).actionView as SearchView
+        search.setOnQueryTextListener(object: SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String?): Boolean {
+                search.clearFocus()
+                menu.findItem(R.id.menu_search).collapseActionView()
+                songList?.clear()
+                songList?.addAll(newList)
+                val filteredList: ArrayList<String> = ArrayList()
+                for (song in songList!!)
+                {
+                    if(query.toString().toLowerCase() in song.toString().toLowerCase())
+                    {
+                        filteredList.add(song)
+                    }
+                }
+                songList?.clear()
+                songList?.addAll(filteredList)
+                listViewAdapter.notifyDataSetChanged()
+                return true
+            }
+
+            override fun onQueryTextChange(newText: String?): Boolean {
+                songList?.clear()
+                songList?.addAll(newList)
+                val filteredList: ArrayList<String> = ArrayList()
+                for (song in songList!!)
+                {
+                    if(newText.toString().toLowerCase() in song.toString().toLowerCase())
+                    {
+                        filteredList.add(song)
+                    }
+                }
+                songList?.clear()
+                songList?.addAll(filteredList)
+                listViewAdapter.notifyDataSetChanged()
+                return true
+            }
+
+        })
+    }
+
+   /* override fun onPause() {
+        super.onPause()
+        if (mp != null) {
+            play.callOnClick()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (mp != null) {
+            play.callOnClick()
+        }
+    }*/
 }
+

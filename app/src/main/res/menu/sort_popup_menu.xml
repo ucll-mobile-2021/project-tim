@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_height="match_parent"
+    android:layout_width="match_parent"
+    >
+
+    <item android:id="@+id/sort_by_song"
+        android:title="@string/sort_by_song"
+        />
+
+
+    <item android:id="@+id/sort_by_artist"
+        android:title="@string/sort_by_artist"
+        />
+</menu>

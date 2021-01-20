@@ -16,9 +16,9 @@
             android:id="@+id/nav_favorites"
             android:icon="@drawable/ic_favorite_full"
             android:title="@string/favorites" />
-        <item
+        <!--<item
             android:id="@+id/nav_playlist"
             android:icon="@drawable/ic_playlist"
-            android:title="@string/playlist" />
+            android:title="@string/playlist" />-->
     </group>
 </menu>
